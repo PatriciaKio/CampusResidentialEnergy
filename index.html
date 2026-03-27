@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Energy Estimator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .result-item {
+            transition: all 0.3s ease;
+        }
+        .result-item:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        select option {
+            background: #1e293b;
+            color: white;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-slate-100 font-sans p-4 md:p-8">
+
+    <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
+                Campus Energy Game
+            </h1>
+            <p class="text-slate-400">Predict energy and costs based on building capacity and seasons</p>
+        </header>
+
+        <!-- Main Card -->
+        <div class="card rounded-3xl p-6 md:p-10 shadow-2xl">
+            
+            <!-- Input Section -->
+            <div class="space-y-6 mb-8">
+                <div>
+                    <label for="capacityInput" class="block text-sm font-medium text-slate-300 mb-3">
+                        Building Capacity (Number of People)
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl font-semibold">👥</span>
+                        <input 
+                            type="number" 
+                            id="capacityInput" 
+                            placeholder="e.g. 500"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-2xl py-4 pl-12 pr-4 text-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label for="seasonSelect" class="block text-sm font-medium text-slate-300 mb-3">
+                        Select Season
+                    </label>
+                    <select 
+                        id="seasonSelect"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-2xl py-4 px-4 text-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all appearance-none cursor-pointer"
+                    >
+                        <option value="Spring">🌸 Spring</option>
+                        <option value="Summer">☀️ Summer</option>
+                        <option value="Autumn">🍂 Autumn</option>
+                        <option value="Winter">❄️ Winter</option>
+                    </select>
+                </div>
+
+                <button 
+                    onclick="calculateCampusStats()"
+                    class="w-full mt-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg transform active:scale-95 transition-all"
+                >
+                    Calculate Usage
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="hidden space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-4">
+                    <h2 class="text-xl font-semibold">Campus Forecast</h2>
+                    <span class="text-xs bg-slate-700 px-2 py-1 rounded-full text-slate-300">Model: Historical Average</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Energy Consumption -->
+                    <div class="result-item p-4 rounded-2xl bg-slate-800/50">
+                        <p class="text-slate-400 text-sm mb-1">Estimated Energy</p>
+                        <p class="text-2xl font-bold"><span id="resEnergy">--</span> <span class="text-sm font-normal text-slate-500">Units</span></p>
+                    </div>
+
+                    <!-- Total Cost -->
+                    <div class="result-item p-4 rounded-2xl bg-slate-800/50 border-l-4 border-cyan-500">
+                        <p class="text-slate-400 text-sm mb-1">Estimated Cost</p>
+                        <p class="text-2xl font-bold text-cyan-400">$<span id="resCost">--</span></p>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-blue-900/20 border border-blue-500/20 mt-4">
+                    <p class="text-xs text-blue-300">
+                        <strong>Insight:</strong> Energy usage per person typically fluctuates based on thermal regulation needs during <span id="seasonDisplay" class="font-bold"></span> months.
+                    </p>
+                </div>
+
+                <p class="text-[10px] text-slate-500 mt-6 italic text-center">
+                    Estimates are calculated using average energy-per-person and cost-per-capacity ratios from campus data.
+                </p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-10 opacity-50">
+                <div class="text-5xl mb-4">🏫</div>
+                <p>Input building capacity and season to see the energy footprint</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Data derived from campusUpdated.csv
+        // Structure: Season -> { avgEnergyPerPerson, avgCostPerCapacity }
+        const campusAverages = {
+            "Autumn": { energy: 0.304, cost: 3.12 },
+            "Winter": { energy: 75.40, cost: 9.85 }, // High due to heating peaks in data
+            "Spring": { energy: 0.452, cost: 4.21 },
+            "Summer": { energy: 0.821, cost: 7.50 }
+        };
+
+        function calculateCampusStats() {
+            const capacityInput = document.getElementById('capacityInput').value;
+            const season = document.getElementById('seasonSelect').value;
+            
+            if (!capacityInput || capacityInput <= 0) return;
+
+            const capacity = parseFloat(capacityInput);
+            const stats = campusAverages[season];
+
+            // Calculate outputs
+            const totalEnergy = (capacity * stats.energy).toFixed(2);
+            const totalCost = (capacity * stats.cost).toFixed(2);
+
+            // Update UI
+            document.getElementById('resEnergy').textContent = parseFloat(totalEnergy).toLocaleString();
+            document.getElementById('resCost').textContent = parseFloat(totalCost).toLocaleString();
+            document.getElementById('seasonDisplay').textContent = season;
+
+            // Show results section
+            document.getElementById('results').classList.remove('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            
+            // Animation
+            const results = document.getElementById('results');
+            results.style.opacity = 0;
+            let opacity = 0;
+            const anim = setInterval(() => {
+                opacity += 0.1;
+                results.style.opacity = opacity;
+                if (opacity >= 1) clearInterval(anim);
+            }, 30);
+        }
+
+        // Allow 'Enter' key
+        document.getElementById('capacityInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                calculateCampusStats();
+            }
+        });
+    </script>
+</body>
+</html>
