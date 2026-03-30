@@ -1,73 +1,53 @@
 import math
 
-def campus_energy_estimator():
+def energy_calculator():
     """
     Campus Energy Estimator
-    
-    This tool provides energy consumption and cost estimates for student residences,
-    calculated based on 10-year University of Florida utility data patterns.
+    Based on 10-year University of Florida utility data on student residences.
     """
-    print("==========================================")
-    print("      CAMPUS ENERGY ESTIMATOR            ")
-    print("==========================================")
+    print("=== Campus Energy Estimator ===")
     print("Source: 10-year UF Student Residence Utility Data\n")
 
+    # User input
     try:
-        # User input for occupants
-        people_input = input("Enter number of residents in the space: ")
-        people = int(people_input)
-        
-        if people <= 0:
-            print("Error: The number of residents must be 1 or more.")
-            return
+        people = int(input("Enter number of people in the space: "))
+        season = input("Enter season (spring, summer, fall, winter): ").lower().strip()
 
-        # User input for season
-        print("Select Season: [Spring, Summer, Autumn, Winter]")
-        season = input("Current season: ").strip().lower()
+        # Base assumptions derived from UF data
+        # base_energy_per_person adjusted to daily rate (~245kWh/month / 30 days)
+        base_energy_per_person = 8.15  # kWh per person per day
+        electricity_rate = 0.135       # $ per kWh (UF/Gainesville average)
 
-        # Constants derived from UF residential averages
-        # Base kWh per person per month (approximate average across seasons)
-        base_monthly_kwh_per_person = 245.0  
-        
-        # Average UF/Local utility rate ($/kWh)
-        electricity_rate = 0.135  
-
-        # Seasonal multipliers reflecting Florida-specific residential loads:
-        # - Summer: Heavy HVAC usage for cooling and humidity control.
-        # - Autumn: High usage continues through early semester heat.
-        # - Winter: Lower overall, factoring in heating efficiency and winter breaks.
-        # - Spring: Moderate usage during milder temperatures.
-        seasonal_factors = {
+        # Seasonal multipliers reflecting Florida-specific residential loads
+        seasonal_factor = {
             "spring": 0.95,
-            "summer": 1.45,   # Peak Florida cooling demand
-            "autumn": 1.10,   # Late summer heat + semester start
-            "fall": 1.10,     # Alias for autumn
-            "winter": 0.85    # Lowered for campus break periods
+            "summer": 1.45,   # High cooling demand
+            "fall": 1.10,     # Late summer heat/semester start
+            "autumn": 1.10,
+            "winter": 0.85    # Heating load balanced by winter break vacancy
         }
 
-        if season not in seasonal_factors:
-            print(f"\nInvalid input: '{season}' is not a recognized season.")
-            print("Please use Spring, Summer, Autumn, or Winter.")
+        if season not in seasonal_factor:
+            print("Invalid season entered.")
             return
 
-        # Perform calculations
-        multiplier = seasonal_factors[season]
-        est_kwh = people * base_monthly_kwh_per_person * multiplier
-        est_cost = est_kwh * electricity_rate
+        # Calculations
+        total_energy = people * base_energy_per_person * seasonal_factor[season]
+        total_cost = total_energy * electricity_rate
 
-        # Display results
-        print("\n" + "-"*42)
-        print(f"{'ESTIMATED MONTHLY RESULTS':^42}")
-        print("-"*42)
-        print(f" Season:              {season.capitalize()}")
-        print(f" Residents:           {people}")
-        print(f" Energy Use:          {est_kwh:,.2f} kWh")
-        print(f" Estimated Cost:      ${est_cost:,.2f}")
-        print("-" * 42)
-        print("Note: Estimates are based on historical campus averages\nand may vary by building type and individual habits.")
+        # Output
+        print("\n--- Results ---")
+        print(f"Season: {season.capitalize()}")
+        print(f"Estimated Daily Energy Use: {total_energy:.2f} kWh")
+        print(f"Estimated Daily Cost: ${total_cost:.2f}")
+        
+        print(f"\nEstimated Monthly Cost (30 days): ${(total_cost * 30):.2f}")
+        print("-" * 30)
+        print("Note: This is based on historical UF residential averages.")
 
     except ValueError:
-        print("\nInput Error: Please enter a valid whole number for residents.")
+        print("Invalid input. Please enter a number for the residents.")
 
+# Run the estimator
 if __name__ == "__main__":
-    campus_energy_estimator()
+    energy_calculator()
